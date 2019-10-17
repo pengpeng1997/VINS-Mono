@@ -9,7 +9,9 @@ add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
 
 find_package(catkin REQUIRED COMPONENTS
         roscpp
+        rospy
         std_msgs
+        image_transport
         cv_bridge
         )
 set(Torch_DIR "/home/pengpeng/libtorch/share/cmake/Torch/")
@@ -34,11 +36,12 @@ catkin_package()
 
 add_executable(detection
         src/detection_node.cpp
+        src/pytorch_cpp_wrapper.cpp
         src/traffic_sign.cpp
         src/vehicle.cpp
         )
 
 
-target_link_libraries(vins_estimator ${catkin_LIBRARIES} ${OpenCV_LIBS} ${CERES_LIBRARIES} ${TORCH_LIBRARIES})
+target_link_libraries(detection ${catkin_LIBRARIES} ${OpenCV_LIBS} ${CERES_LIBRARIES} ${TORCH_LIBRARIES})
 
 
