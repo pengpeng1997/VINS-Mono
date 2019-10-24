@@ -4,52 +4,67 @@
 
 #ifndef SRC_TRAFFIC_SIGN_H
 #define SRC_TRAFFIC_SIGN_H
-/*
- * A ROS node to do inference using PyTorch model
- * Shigemichi Matsuzaki
- *
- */
-
-#include <ros/ros.h>
 
 #include <opencv2/opencv.hpp>
-#include <image_transport/image_transport.h>
-#include <cv_bridge/cv_bridge.h>
-
-#include "pytorch_cpp_wrapper.h"
+#include <torch/script.h>
 
 #include <iostream>
-#include <memory>
-#include <tuple>
+#include <string>
+#include <vector>
+#include <fstream>
 
-class TSDetector {
-private:
-    ros::NodeHandle nh_;
+typedef struct ObjRect {
+    float x1;
+    float y1;
+    float x2;
+    float y2;
+    float score;
+}ObjRect;
 
-    ros::ServiceServer get_label_image_server_;
+typedef struct ObjInfo {
+    ObjRect bbox;
+    cv::Vec4f regression;
+}ObjInfo;
 
-    image_transport::ImageTransport it_;
-
-    image_transport::Subscriber sub_image_;
-    image_transport::Publisher  pub_label_image_;
-    image_transport::Publisher  pub_color_image_;
-
-    PyTorchCppWrapper pt_wrapper_;
-
-    cv::Mat colormap_;
-
+class CascadeCNN {
 public:
-    TSDetector(ros::NodeHandle & nh);
+    CascadeCNN(const std::string& model_dir, const bool use_gpu = false);
+    void Detect(const cv::Mat& img, std::vector<ObjInfo>& ObjInfo, int minSize, double* threshold, double factor);
 
-    void image_callback(const sensor_msgs::ImageConstPtr& msg);
-    std::tuple<sensor_msgs::ImagePtr, sensor_msgs::ImagePtr> inference(cv::Mat & input_image);
-//    bool image_inference_srv_callback(semantic_segmentation_srvs::GetLabelImage::Request  & req,
-//                                      semantic_segmentation_srvs::GetLabelImage::Response & res);
-    cv_bridge::CvImagePtr msg_to_cv_bridge(sensor_msgs::ImageConstPtr msg);
-    cv_bridge::CvImagePtr msg_to_cv_bridge(sensor_msgs::Image msg);
-    void label_to_color(cv::Mat& label, cv::Mat& color_label);
+
+private:
+    void img2tensor(cv::Mat & img, at::Tensor & tensor);
+    void tensor2img(at::Tensor tensor, cv::Mat & img);
+    at::Tensor get_output(at::Tensor input_tensor);
+    at::Tensor get_argmax(at::Tensor input_tensor);
+
+    std::vector<ObjInfo> NonMaximumSuppression(std::vector<ObjInfo>& bboxes, float thresh, char methodType);
+    void Bbox2Square(std::vector<ObjInfo>& bboxes);
+    std::vector<ObjInfo> BoxRegress(std::vector<ObjInfo>& objInfo,int stage);
+    void Padding(int img_w,int img_h);
+
+    void GenerateBoundingBox(at::Tensor cls, at::Tensor reg, float scale, float threshold, const int ws, const int hs);
+    void ClassifyObj_batch(const std::vector<ObjInfo>& regressed_rects,cv::Mat &sample_single,
+                           torch::jit::script::Module& net,double thresh,char netName);
+    void plot(cv::Mat& img, std::vector<ObjInfo>& ObjInfo);
+
+private:
+    torch::jit::script::Module PNet_;
+    torch::jit::script::Module RNet_;
+//    torch::jit::script::Module Classifier;
+    std::vector<ObjInfo> candidate_rects_;
+    std::vector<ObjInfo> total_boxes_;
+    std::vector<ObjInfo> regressed_rects_;
+    std::vector<ObjInfo> regressed_padding_;
+
+    std::vector<cv::Mat> crop_img_;
+    int curr_feature_map_w_;
+    int curr_frature_map_h_;
+    int num_channels_;
+    int minSize;
+    double* threshold;
+    double factor;
+    bool use_gpu;
 };
-
-
 
 #endif //SRC_TRAFFIC_SIGN_H

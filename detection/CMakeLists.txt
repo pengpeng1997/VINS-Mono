@@ -14,7 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
         image_transport
         cv_bridge
         )
-set(Torch_DIR "/home/pengpeng/libtorch/share/cmake/Torch/")
+set(Torch_DIR "/home/pengpen3/libtorch/share/cmake/Torch/")
 find_package(Torch REQUIRED)
 
 find_package(OpenCV REQUIRED)
@@ -36,7 +36,7 @@ catkin_package()
 
 add_executable(detection
         src/detection_node.cpp
-        src/pytorch_cpp_wrapper.cpp
+        src/utils.cpp
         src/traffic_sign.cpp
         src/vehicle.cpp
         )
