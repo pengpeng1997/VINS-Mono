@@ -31,12 +31,8 @@ public:
     CascadeCNN(const std::string& model_dir, const bool use_gpu = false);
     void Detect(const cv::Mat& img, std::vector<ObjInfo>& ObjInfo, int minSize, double* threshold, double factor);
 
-
 private:
     void img2tensor(cv::Mat & img, at::Tensor & tensor);
-    void tensor2img(at::Tensor tensor, cv::Mat & img);
-    at::Tensor get_output(at::Tensor input_tensor);
-    at::Tensor get_argmax(at::Tensor input_tensor);
 
     std::vector<ObjInfo> NonMaximumSuppression(std::vector<ObjInfo>& bboxes, float thresh, char methodType);
     void Bbox2Square(std::vector<ObjInfo>& bboxes);

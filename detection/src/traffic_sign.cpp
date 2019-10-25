@@ -2,7 +2,6 @@
 // Created by pengpeng on 2019/10/17.
 //
 
-
 #include "traffic_sign.h"
 #include<typeinfo>
 
@@ -19,46 +18,11 @@ CascadeCNN::CascadeCNN(const std::string &model_dir, const bool use_gpu):use_gpu
 
 void CascadeCNN::img2tensor(cv::Mat & img, at::Tensor & tensor)
 {
-    // Get the size of the input image
-    int height = img.size().height;
-    int width  = img.size().width;
-
-    // Create a vector of inputs.
-    std::vector<int64_t>shape = {1, height, width, 3};
-    if(use_gpu) {
-        tensor = torch::from_blob(img.data, at::IntList(shape), at::ScalarType::Byte).to(torch::kFloat).to(torch::kCUDA);
-    } else {
-        tensor = torch::from_blob(img.data, at::IntList(shape), at::ScalarType::Byte).to(torch::kFloat).to(torch::kCPU);
-    }
-    tensor = at::transpose(tensor, 1, 2);
-    tensor = at::transpose(tensor, 1, 3);
-}
-
-void CascadeCNN::tensor2img(at::Tensor tensor, cv::Mat & img)
-{
-    std::cout << tensor.sizes() << std::endl;
-    // Get the size of the input image
-    int height = tensor.sizes()[0];
-    int width  = tensor.sizes()[1];
-
-    // Convert to OpenCV
-    img = cv::Mat(height, width, CV_8U, tensor. template data<uint8_t>());
-}
-
-at::Tensor CascadeCNN::get_output(at::Tensor input_tensor)
-{
-    // Execute the model and turn its output into a tensor.
-    at::Tensor output = PNet_.forward({input_tensor}).toTensor();
-
-    return output;
-}
-
-at::Tensor CascadeCNN::get_argmax(at::Tensor input_tensor)
-{
-    // Calculate argmax to get a label on each pixel
-    at::Tensor output = at::argmax(input_tensor, 1).to(torch::kCPU).to(at::kByte);
-
-    return output;
+    if(use_gpu) tensor = torch::from_blob(img.data, {1, img.rows, img.cols, 3}, torch::kByte).to(torch::kCUDA);
+    else tensor = torch::from_blob(img.data, {1, img.rows, img.cols, 3}, torch::kByte).to(torch::kCPU);
+    tensor = tensor.permute({0, 3, 1, 2});
+    tensor = tensor.toType(torch::kFloat);
+    tensor = tensor.div(255);
 }
 
 // compare score
